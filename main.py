@@ -15,6 +15,7 @@ Matéo
 
 import json
 import folium
+from collections import deque
 
 
 def chargement() -> list:
@@ -220,7 +221,7 @@ print(extraction_graphe_200())
 """
 
 
-def comptage_graphe_200() -> int:
+def comptage_graphe_200_arrete() -> int:
     _, graphe_200 = extraction_graphe_200()
     nombre_arrete = 0
     for e in graphe_200.values():
@@ -230,7 +231,7 @@ def comptage_graphe_200() -> int:
 
 """
 Q13
-print(comptage_graphe_200())
+print(comptage_graphe_200_arrete())
 
 """
 
@@ -242,7 +243,7 @@ puisse avoir ?
 """
 
 
-def comptage_graphe_200() -> int:
+def comptage_graphe_200_voisin() -> int:
     max = 0
     _, graphe_200 = extraction_graphe_200()
     for e in graphe_200.values():
@@ -261,7 +262,7 @@ identifiera ces deux arbres par arbre_a et arbre_g.
 """
 
 
-def comptage_graphe_200() -> list:
+def arbre_max_voisin_graphe_200() -> list:
     L = []
     arbres_info = []
     max = 0
@@ -290,10 +291,67 @@ Question 16: Représentez sur une carte de la ville les arbres (et leur voisins)
 question précédente. Vous devriez obtenir une carte similaire à celle de la Figure 2
 
 """
-def extration_voisin(tuple) -> list:
-
-    
 
 
-voisin = extration_voisin(extraction_graphe_200())
-carte(extration_voisin(voisin))
+def extration_voisins(tuple, arbres) -> list:
+    arbres_total, graphe_200 = tuple
+    voisins = []
+    resultat = []
+    for e in arbres:
+        indice = e[0]
+        for voisin in graphe_200[indice]:
+            voisins.append(voisin[1])
+    for i in voisins:
+        resultat.append(arbres_total[i])
+    return resultat
+
+
+"""
+voisin = extration_voisins(extraction_graphe_200(), comptage_graphe_200())
+carte(voisin)
+"""
+
+
+"""
+Q17. Combien de sites d’arbres sont ils joignables partant de arbre_a (resp. arbre_g)
+lors de l’exploration d’une abeille juvénile?
+"""
+
+
+def exploration(arbre: int, graphe_200: dict) -> int:
+
+    nombre_arbre_visité = 0
+    arbre_atteint = []
+    file = deque([arbre])
+
+    while file:
+        arbre_en_visite = file.popleft()
+        if arbre_en_visite not in arbre_atteint:
+            arbre_atteint.append(arbre_en_visite)
+            nombre_arbre_visité += 1
+
+            for _, voisin in graphe_200.get(arbre_en_visite, []):
+                if voisin not in arbre_atteint:
+                    file.append(voisin)
+
+    return nombre_arbre_visité
+
+
+L = arbre_max_voisin_graphe_200()
+arbre_a, arbre_g = L[0], L[1]
+print(exploration(int(arbre_a[0]), extraction_graphe_200()[1]))
+
+
+"""
+Question 18: Pourquoi le nombre de sites d’arbres joignable à partir de arbre_a est-il différent
+du nombre de sites d’arbres joignables à partir de arbre_g ?
+
+"""
+
+"""
+Question 19: Quelle est la distance minimale que doit pouvoir voler une abeille juvénile (sans
+faire de pause) pour pouvoir joindre plus de 99% des sites d’arbres recensés dans notre jeu de
+données lorsqu’elle part d’un platane du Parking Square de Guyenne ? (on se contentera d’une
+réponse correcte à + ou - 5 mètres.
+
+"""
