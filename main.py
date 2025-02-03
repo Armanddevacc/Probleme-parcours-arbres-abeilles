@@ -339,7 +339,7 @@ def exploration(arbre: int, graphe_200: dict) -> int:
 
 L = arbre_max_voisin_graphe_200()
 arbre_a, arbre_g = L[0], L[1]
-print(exploration(int(arbre_a[0]), extraction_graphe_200()[1]))
+print(exploration(int(arbre_g[0]), extraction_graphe_200()[1]))
 
 
 """
