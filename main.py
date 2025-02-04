@@ -206,12 +206,12 @@ def extraction_graphe(distance) -> tuple:
     Returns:
         Dict[int, List[Tuple[float, int]]]: Graphe filtré.
     """
-    arbre, graphe = init_graph()
+    arbres, graphe = init_graph()
     graphe_200 = {}
     for id, aretes in graphe.items():
         # Filtrer les arêtes où arete[0] > 200
         graphe_200[id] = [arete for arete in aretes if arete[0] <= distance]
-    return arbre, graphe_200
+    return arbres, graphe_200
 
 
 """
@@ -279,8 +279,9 @@ def arbre_max_voisin_graphe(d) -> list:
     return arbres_info
 
 
+"""
 print(arbre_max_voisin_graphe(200))
-
+"""
 
 """
 
@@ -436,6 +437,10 @@ Identifier tous les arbres mellifères dans les données (Acer, Alnus, Betula, C
 Utiliser Dijkstra pour trouver le plus court chemin entre le platane du Parking Square de Guyenne et chaque arbre mellifère.
 Calculer le score de chaque destination.
 Retourner l’arbre avec le meilleur score.
+
+
+
+cette question etant longue elle a été fait avec chatgpt
 """
 
 arbres_melliferes = {
@@ -460,6 +465,7 @@ arbres_melliferes = {
 def plus_court_chemin_dijkstra(graphe, depart):
     """
     comme dans cours
+
     """
     D = {sommet: float("inf") for sommet in graphe}  # dictionnaire des distances
     parents = {sommet: None for sommet in graphe}  # Pour reconstruire les chemins
@@ -476,11 +482,10 @@ def plus_court_chemin_dijkstra(graphe, depart):
             if v in F and D[v] > D[u] + poids:
                 D[v] = D[u] + poids
                 parents[v] = u  # chemin
-                print("modif")
     return D, parents
 
 
-def calculer_meilleur_arbre(a=355):
+def calculer_meilleur_arbre(a, func):
 
     arbres, graphe_355 = extraction_graphe(a)
     L = [
@@ -490,8 +495,7 @@ def calculer_meilleur_arbre(a=355):
         and "Parking Square de Guyenne" in arbre["denomination"]
     ]
     platane_id = L[0]["id"]
-    distances, chemins = plus_court_chemin_dijkstra(graphe_355, platane_id)
-    print(chemins)
+    distances, chemins = func(graphe_355, platane_id)
 
     meilleur_score = float(
         "-inf"
@@ -523,7 +527,7 @@ def calculer_meilleur_arbre(a=355):
 
 
 """
-arbre_optimal = calculer_meilleur_arbre()
+arbre_optimal = calculer_meilleur_arbre(355, plus_court_chemin_dijkstra)
 """
 
 """
@@ -537,6 +541,247 @@ square de Guyenne.
 Djistra est le plus rapide car on a pas de poid négatif et fonctionne pour trouver le plus court chemin.
 
 
-Mais la on peut faire un algo A*
+Mais la on peut faire un algo A* car un a 
+
+on peut tester un Bellman-Ford qui sera plus  long car on a une heuristique (interet)
+
+et un glouton 
+
+sur le même model que 
 
 """
+
+
+def bellman_ford(graphe, s):
+    D = {sommet: float("inf") for sommet in graphe}
+    parents = {sommet: None for sommet in graphe}
+    D[s] = 0
+
+    for _ in range(len(graphe) - 1):
+        for u in graphe:
+            for poids, v in graphe[u]:
+                if D[u] + poids < D[v]:
+                    D[v] = D[u] + poids
+                    parents[v] = u
+
+    return D, parents
+
+
+def glouton(graphe, s):
+    """
+    choisit le voisin avec la plus petite distance.
+    """
+    D = {sommet: float("inf") for sommet in graphe}
+    parents = {sommet: None for sommet in graphe}
+    D[s] = 0
+    visited = set()
+    queue = [s]  # Liste des nœuds à explorer
+
+    while queue:
+        # Sélectionne le nœud le plus proche qui n'a pas encore été exploré
+        u = min(queue, key=lambda sommet: D[sommet])
+        queue.remove(u)
+        visited.add(u)
+
+        # Exploration des voisins
+        for poids, v in graphe[u]:
+            if v not in visited:
+                queue.append(v)  # Ajouter aux nœuds à explorer
+                if D[u] + poids < D[v]:
+                    D[v] = D[u] + poids
+                    parents[v] = u
+
+    return D, parents
+
+
+def heuristique(arbre):
+    """
+    Heuristique basée sur l'intérêt de l'arbre : age éloigné et mélifaire
+    """
+
+    age = (2025 - arbre["date_plantation"]) if arbre["date_plantation"] else 0
+    interet = 4 * age
+
+    if arbre["genre"] in arbres_melliferes:
+        interet += 1
+
+    return interet
+
+
+def a_star(graphe, start, goal, arbres):
+    D = {sommet: float("inf") for sommet in graphe}
+    parents = {sommet: None for sommet in graphe}
+    D[start] = 0
+    F = list(graphe.keys())  # Sommets non visités
+
+    while F:
+        # Sélectionne le nœud avec la meilleure estimation de distance
+        u = min(F, key=lambda sommet: D[sommet] + heuristique(arbres[sommet]))
+        F.remove(u)
+
+        if u == goal:
+            break  # Arrêt si on atteint la cible
+
+        for poids, v in graphe[u]:
+            if v in F and D[v] > D[u] + poids:
+                D[v] = D[u] + poids
+                parents[v] = u
+
+    return D, parents
+
+
+import timeit
+
+
+def comparer_algorithmes():
+    """
+    Compare les performances de 4 algorithmes de plus court chemin sur le sous-graphe de 355m.
+    """
+
+    # Extraction du sous-graphe 355m
+    arbres, graphe_355 = extraction_graphe(355)
+
+    # Identifier le platane du Parking Square de Guyenne
+    platanes = [
+        arbre
+        for arbre in arbres
+        if arbre["genre"] == "Platanus"
+        and "Parking Square de Guyenne" in arbre["denomination"]
+    ]
+    if not platanes:
+        return None
+    start = platanes[0]["id"]
+
+    # Sélectionner un arbre mellifère comme cible
+    goal = next(
+        (arbre["id"] for arbre in arbres if arbre["genre"] in arbres_melliferes), None
+    )
+
+    # Liste des algorithmes à tester
+    algorithmes = {
+        "Dijkstra": lambda: plus_court_chemin_dijkstra(graphe_355, start),
+        "A*": lambda: a_star(graphe_355, start, goal, arbres),
+        "Bellman-Ford": lambda: bellman_ford(graphe_355, start),
+    }
+    """
+            prend trop de temps:
+            "Glouton": lambda: glouton(graphe_355, start),
+    """
+    # Dictionnaire pour stocker les temps d'exécution
+    resultats = {}
+
+    # Mesure des temps pour chaque algorithme
+    for nom, fonction in algorithmes.items():
+        temps_execution = timeit.timeit(fonction, number=1)
+        resultats[nom] = temps_execution
+
+    return resultats
+
+
+"""
+# Exécuter la comparaison
+performance_resultats = comparer_algorithmes()
+
+# Afficher les résultats
+print("Temps d'exécution des algorithmes :")
+for algo, temps in performance_resultats.items():
+    print(f"{algo}: {temps:.5f} secondes")
+"""
+
+"""
+Placement des ruche
+
+
+Question 23: Ecrivez une fonction qui calcule les arbres mellifères atteignables par une abeille
+partant d’un arbre donné dans graph_355. Justifiez votre code
+"""
+
+
+def melliferes_atteignable(s, l):
+    """
+    s l'abre de départ
+    l = 2000m
+    """
+
+    arbres, graphe_355 = extraction_graphe(355)
+    listes_melliferes_atteignables = []
+    D, parent = plus_court_chemin_dijkstra(graphe_355, s)
+    for sommet, distance in D.items():
+        if distance <= l:
+            if arbres[sommet]["genre"] in arbres_melliferes:
+                listes_melliferes_atteignables.append(sommet)
+    return listes_melliferes_atteignables
+
+
+"""
+s=1 le sommet au choix
+print(melliferes_atteignable(s, 2000))
+"""
+
+
+"""
+Question 24: Calculez et représentez sur une carte l’ensemble des parcours possibles pour une
+abeille partant de platane du parking square de Guyenne pour collecter du pollen sur un seul
+arbre mellifère.
+
+"""
+
+
+def representer_parcours_abeille():
+
+    arbres, graphe_355 = extraction_graphe(355)
+    L = [
+        arbre
+        for arbre in arbres
+        if arbre["genre"] == "Platanus"
+        and "Parking Square de Guyenne" in arbre["denomination"]
+    ]
+    s = L[0]["id"]
+
+    arbres_accessibles = melliferes_atteignable(s, 2000)
+
+    _, parents = plus_court_chemin_dijkstra(graphe_355, s)
+    print(len(arbres_accessibles))
+
+    m = folium.Map(
+        location=[
+            arbres[s]["geo_point_2d"]["lat"],
+            arbres[s]["geo_point_2d"]["lon"],
+        ],
+        zoom_start=14,
+    )
+
+    for i in range(len(arbres_accessibles)):
+        cible = arbres_accessibles[i]
+
+        chemin = []
+        noeud = cible
+        while noeud is not None:  # recupere les chemins pour accéder à arbre
+            chemin.append(noeud)
+            noeud = parents[noeud]
+
+        for arbre_id in chemin:
+            arbre = arbres[arbre_id]
+            couleur = (
+                "blue" if arbre_id == s else "green" if arbre_id == cible else "orange"
+            )
+            folium.Marker(
+                location=[arbre["geo_point_2d"]["lat"], arbre["geo_point_2d"]["lon"]],
+                tooltip=f"{arbre['denomination']} - {arbre['genre']}",
+                icon=folium.Icon(color=couleur),
+            ).add_to(m)
+
+        folium.PolyLine(
+            [
+                (arbres[n]["geo_point_2d"]["lat"], arbres[n]["geo_point_2d"]["lon"])
+                for n in chemin
+            ],
+            color="red",
+            weight=2.5,
+        ).add_to(m)
+
+    m.save("parcours_abeille.html")
+
+
+# Exécution
+representer_parcours_abeille()
