@@ -118,22 +118,22 @@ def find_max_n_min():
     d_max = 0
     d_min = 0
     D = {}
-    Arbres = structuration()[1]
+    Arbres = structuration()
     for arbre1 in Arbres:
         for arbre2 in Arbres:
             if arbre1 != arbre2:
-                D[
-                    harversine(
-                        arbre1["geo_point_2d"]["lat"],
-                        arbre2["geo_point_2d"]["lat"],
-                        arbre1["geo_point_2d"]["lon"],
-                        arbre2["geo_point_2d"]["lon"],
-                    )
-                ] = (arbre1, arbre2)
+                D[(arbre1["id"], arbre2["id"])] = harversine(
+                    arbre1["geo_point_2d"]["lat"],
+                    arbre2["geo_point_2d"]["lat"],
+                    arbre1["geo_point_2d"]["lon"],
+                    arbre2["geo_point_2d"]["lon"],
+                )
 
-    D = list((dict(sorted(D.items()))).items())
-    d_max = D[-1]
-    d_min = D[0]
+    D = dict(sorted(D.items(), key=lambda item: item[1]))
+    d_min = next(
+        iter(D.items())
+    )  # next est l'équivalent de L[0] chez les dictionnaires
+    d_max = next(reversed(D.items()))  # on utilise reverse pour avoir L[-1]
     return (d_max[0], d_min[0])
 
 
@@ -184,7 +184,7 @@ def verification(G: dict):
     nombre_noeuds_verif = len(G)
     nombre_arretes_verif = 0
     for e in G.values():
-        nombre_aretes_verif += len(e)
+        nombre_arretes_verif += len(e)
     return (
         nombre_noeuds == nombre_noeuds_verif,
         nombre_arretes == nombre_arretes_verif,
@@ -194,12 +194,12 @@ def verification(G: dict):
 """
 exercice 11:
 
-print(verification(init_graph()))
+print(verification(init_graph()[1]))
 
 """
 
 
-def extraction_graphe_200() -> tuple:
+def extraction_graphe(distance) -> tuple:
     """
     Extrait les arêtes du graphe avec des distances inférieures ou égales à 200 mètres.
 
@@ -210,19 +210,19 @@ def extraction_graphe_200() -> tuple:
     graphe_200 = {}
     for id, aretes in graphe.items():
         # Filtrer les arêtes où arete[0] > 200
-        graphe_200[id] = [arete for arete in aretes if arete[0] <= 200]
+        graphe_200[id] = [arete for arete in aretes if arete[0] <= distance]
     return arbre, graphe_200
 
 
 """
 Q12.
-print(extraction_graphe_200())
+print(extraction_graphe(200))
 
 """
 
 
-def comptage_graphe_200_arrete() -> int:
-    _, graphe_200 = extraction_graphe_200()
+def comptage_graphe_arrete(d) -> int:
+    _, graphe_200 = extraction_graphe(d)
     nombre_arrete = 0
     for e in graphe_200.values():
         nombre_arrete += len(e)
@@ -231,7 +231,7 @@ def comptage_graphe_200_arrete() -> int:
 
 """
 Q13
-print(comptage_graphe_200_arrete())
+print(comptage_graphe_200_arrete(200))
 
 """
 
@@ -243,16 +243,17 @@ puisse avoir ?
 """
 
 
-def comptage_graphe_200_voisin() -> int:
+def comptage_graphe_voisin(graphe_200) -> int:
     max = 0
-    _, graphe_200 = extraction_graphe_200()
     for e in graphe_200.values():
         if max < len(e):
             max = len(e)
     return max
 
 
-# print(comptage_graphe_200())
+# _, graphe_200 = extraction_graphe(d)
+
+# print(comptage_graphe_voisin(graphe_200))
 
 
 """
@@ -262,16 +263,13 @@ identifiera ces deux arbres par arbre_a et arbre_g.
 """
 
 
-def arbre_max_voisin_graphe_200() -> list:
+def arbre_max_voisin_graphe(d) -> list:
     L = []
     arbres_info = []
-    max = 0
-    arbres, graphe_200 = extraction_graphe_200()
-    for e in graphe_200.items():
-        if max < len(e[1]):
-            max = len(e[1])
-            L = [e[0]]
-        elif max == len(e[1]):
+    arbres, graphe_d = extraction_graphe(d)
+    max = comptage_graphe_voisin(graphe_d)
+    for e in graphe_d.items():
+        if max == len(e[1]):
             L.append(e[0])
     for indice in L:
         arbre = arbres[indice]
@@ -281,9 +279,8 @@ def arbre_max_voisin_graphe_200() -> list:
     return arbres_info
 
 
-"""
-print(comptage_graphe_200())
-"""
+print(arbre_max_voisin_graphe(200))
+
 
 """
 
@@ -307,7 +304,7 @@ def extration_voisins(tuple, arbres) -> list:
 
 
 """
-voisin = extration_voisins(extraction_graphe_200(), comptage_graphe_200())
+voisin = extration_voisins(extraction_graphe(200), arbre_max_voisin_graphe(200))
 carte(voisin)
 """
 
@@ -323,9 +320,11 @@ def exploration(arbre: int, graphe_200: dict) -> int:
     nombre_arbre_visité = 0
     arbre_atteint = []
     file = deque([arbre])
-
+    chemin = {}  # ajouter pour la question 20
     while file:
+
         arbre_en_visite = file.popleft()
+        chemin[arbre_en_visite] = graphe_200[arbre_en_visite]
         if arbre_en_visite not in arbre_atteint:
             arbre_atteint.append(arbre_en_visite)
             nombre_arbre_visité += 1
@@ -334,17 +333,21 @@ def exploration(arbre: int, graphe_200: dict) -> int:
                 if voisin not in arbre_atteint:
                     file.append(voisin)
 
-    return nombre_arbre_visité
+    return nombre_arbre_visité, chemin
 
 
-L = arbre_max_voisin_graphe_200()
+"""
+L = arbre_max_voisin_graphe()
 arbre_a, arbre_g = L[0], L[1]
-print(exploration(int(arbre_g[0]), extraction_graphe_200()[1]))
-
+print(exploration(int(arbre_g[0]), extraction_graphe(200)[1]))
+"""
 
 """
 Question 18: Pourquoi le nombre de sites d’arbres joignable à partir de arbre_a est-il différent
 du nombre de sites d’arbres joignables à partir de arbre_g ?
+
+
+Densité locale des arbres : Si arbre_a est situé dans une zone où les arbres sont plus rapprochés, il aura plus de connexions dans le graphe que arbre_g.
 
 """
 
@@ -353,5 +356,187 @@ Question 19: Quelle est la distance minimale que doit pouvoir voler une abeille 
 faire de pause) pour pouvoir joindre plus de 99% des sites d’arbres recensés dans notre jeu de
 données lorsqu’elle part d’un platane du Parking Square de Guyenne ? (on se contentera d’une
 réponse correcte à + ou - 5 mètres.
+
+
+Créer des graphes avec différentes distances seuils (210m, 220m, 230m, ...).
+Mesurer la composante connexe contenant le platane du Parking Square de Guyenne.
+Déterminer la plus petite distance pour laquelle cette composante couvre 99% des arbres.
+
+"""
+
+
+def determiner_couverture_totale():
+
+    a = 270
+    # platane du Parking Square de Guyenne
+    arbres, graphe_a = extraction_graphe(a)
+    L = [
+        arbre
+        for arbre in arbres
+        if arbre["genre"] == "Platanus"
+        and "Parking Square de Guyenne" in arbre["denomination"]
+    ]
+    platane = L[0]["id"]
+    nombre_arbre, _ = exploration(platane, graphe_a)
+    recouvrement = nombre_arbre / len(arbres)
+    while recouvrement < 0.99:
+        arbres, graphe_a = extraction_graphe(a)
+        nombre_arbre, _ = exploration(platane, graphe_a)
+        print(recouvrement, a)
+        a += 5
+        recouvrement = nombre_arbre / len(arbres)
+    return a
+
+
+# print(determiner_couverture_totale())
+
+
+"""
+3 Plus court chemin
+
+
+Question 20: UPDATE : Créez un graphe dont les noeuds sont des arbres, deux arbres sont
+reliés par une arrête lorsque la distance entre ces arbres est inférieure ou égale à 355m. Les
+arrête sont étiquetées par la distance entre ces arbres. Vérifiez que la plus grande composante
+connexe de ce graphe comporte bien 16845 arêtes.
+On considère maintenant graph_355 égal à la plus grande composante connexe de ce graphe.
+"""
+
+
+def plus_grande_compo_connexe(d):
+    _, graphe_a = extraction_graphe(d)
+
+    _, arbres = exploration(
+        1, graphe_a
+    )  # on prend 1 comme id car il est suceptible d'appartenir à la plus grand composante car elle recouvre la quasi entiereté du graphe
+    nombre_arretes = 0
+    for e in arbres.values():
+        nombre_arretes += len(e)
+    return int(nombre_arretes / 2)
+
+
+"""
+print(plus_grande_compo_connexe(355))
+"""
+
+"""
+Question 21: Quel est l’arbre le plus intéressant pour une abeille juvénile en supposant que:
+• Nos abeilles n’empruntent que les plus courts chemins1
+• Plus un arbre est vieux plus il porte des fleurs et donc plus il est intéressant. On suppose
+les arbres de destinations ont un intérêt égal à 4 fois leur âge.
+• Plus un chemin est long moins il est intéressant. On suppose que chaque dizaine de mètres parcourue coute -1
+• Les arbres mellifères sur les chemins compensent un peu les distances parcourues. On
+suppose que chaque arbre mellifère apporte un bonus de 1.
+Justifiez votre résultat.
+
+
+Solution:
+Construire un graphe avec une distance limite de 355m (comme question 20).
+Identifier tous les arbres mellifères dans les données (Acer, Alnus, Betula, Castanea, etc.).
+Utiliser Dijkstra pour trouver le plus court chemin entre le platane du Parking Square de Guyenne et chaque arbre mellifère.
+Calculer le score de chaque destination.
+Retourner l’arbre avec le meilleur score.
+"""
+
+arbres_melliferes = {
+    "Acer",
+    "Alnus",
+    "Betula",
+    "Castanea",
+    "Corylus",
+    "Crataegus",
+    "Gleditsia",
+    "Morus",
+    "Pyrus",
+    "Robinia",
+    "Salix",
+    "Sorbus",
+    "Sophora",
+    "Tilia",
+    "Ulmus",
+}
+
+
+def plus_court_chemin_dijkstra(graphe, depart):
+    """
+    comme dans cours
+    """
+    D = {sommet: float("inf") for sommet in graphe}  # dictionnaire des distances
+    parents = {sommet: None for sommet in graphe}  # Pour reconstruire les chemins
+    D[depart] = 0
+    F = list(graphe.keys())  # liste des non visité dont la distance n'a pas été calculé
+    C = []  # tout les sommets pour lequel on a calculer la distance min
+
+    while F:
+        u = min(F, key=lambda sommet: D[sommet])  # prend le sommet le plus proche
+        F.remove(u)
+        C.append(u)
+
+        for poids, v in graphe[u]:
+            if v in F and D[v] > D[u] + poids:
+                D[v] = D[u] + poids
+                parents[v] = u  # chemin
+                print("modif")
+    return D, parents
+
+
+def calculer_meilleur_arbre(a=355):
+
+    arbres, graphe_355 = extraction_graphe(a)
+    L = [
+        arbre
+        for arbre in arbres
+        if arbre["genre"] == "Platanus"
+        and "Parking Square de Guyenne" in arbre["denomination"]
+    ]
+    platane_id = L[0]["id"]
+    distances, chemins = plus_court_chemin_dijkstra(graphe_355, platane_id)
+    print(chemins)
+
+    meilleur_score = float(
+        "-inf"
+    )  # car score potentiellement négatif donc on mets -inf
+    meilleur_arbre = None
+
+    for arbre in arbres:
+        destination_id = arbre["id"]
+        distance = distances.get(
+            destination_id, float("inf")
+        )  # valeur de base est +inf pour les arbres inaccessibles
+
+        if distance != float("inf"):
+            age = (2025 - arbre["date_plantation"]) if arbre["date_plantation"] else 0
+            interet = 4 * age - (distance // 10)
+
+            # Bonus pour arbre mellifère sur le chemin
+            noeud = destination_id
+            while noeud in chemins:
+
+                noeud = chemins[noeud]  # récup le parent
+                if noeud is not None and arbres[noeud]["genre"] in arbres_melliferes:
+                    interet += 1
+            if interet > meilleur_score:
+                meilleur_score = interet
+                meilleur_arbre = arbre
+
+    return meilleur_arbre
+
+
+"""
+arbre_optimal = calculer_meilleur_arbre()
+"""
+
+"""
+Question 22: Pour répondre à la question précédente, vous avez probablement utilisé un al-
+gorithme permettant de calculer un plus court chemin dans un graphe. Qu’est ce qui a guidé
+votre choix ? Justifiez votre choix en comparant les performances de 4 algorithmes de recherche
+de plus court chemin. Vous pourrez, par exemple, comparer ces algorithmes sur le calcul des
+chemins vers tous les arbres mellifères du sous graphe 355 en partant du platane du parking
+square de Guyenne.
+
+Djistra est le plus rapide car on a pas de poid négatif et fonctionne pour trouver le plus court chemin.
+
+
+Mais la on peut faire un algo A*
 
 """
