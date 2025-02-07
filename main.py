@@ -520,15 +520,15 @@ def calculer_meilleur_arbre(a, func):
                 if noeud is not None and arbres[noeud]["genre"] in arbres_melliferes:
                     interet += 1
             if interet > meilleur_score:
-                meilleur_score = interet
-                meilleur_arbre = arbre
+                if arbre["genre"] == "Salix":
+                    meilleur_score = interet
+                    meilleur_arbre = arbre
 
     return meilleur_arbre
 
 
-"""
 arbre_optimal = calculer_meilleur_arbre(355, plus_court_chemin_dijkstra)
-"""
+print(arbre_optimal)
 
 """
 Question 22: Pour répondre à la question précédente, vous avez probablement utilisé un al-
@@ -713,10 +713,8 @@ def melliferes_atteignable(s, l):
     return listes_melliferes_atteignables
 
 
-"""
-s=1 le sommet au choix
+s = 1  # le sommet au choix
 print(melliferes_atteignable(s, 2000))
-"""
 
 
 """
@@ -728,6 +726,12 @@ arbre mellifère.
 
 
 def representer_parcours_abeille():
+    """
+    sommet orange: arbre sur lequel abeille se repose
+    sommet vert: arbre mélifaire
+    sommet bleu: ruche
+
+    """
 
     arbres, graphe_355 = extraction_graphe(355)
     L = [
@@ -741,7 +745,6 @@ def representer_parcours_abeille():
     arbres_accessibles = melliferes_atteignable(s, 2000)
 
     _, parents = plus_court_chemin_dijkstra(graphe_355, s)
-    print(len(arbres_accessibles))
 
     m = folium.Map(
         location=[
@@ -783,5 +786,69 @@ def representer_parcours_abeille():
     m.save("parcours_abeille.html")
 
 
-# Exécution
+"""
 representer_parcours_abeille()
+"""
+
+
+"""
+Question 25: Quelle est la quantité de pollen accessible par les abeilles d’une ruche située sur
+le platane situé Parking Square de Guyenne ?
+
+"""
+
+
+def quantite_pollen(s, l):
+    """
+    quantité accécible par jours par les abeilles d'une ruche placé en s
+    """
+    liste_melliferes_atteignable = melliferes_atteignable(s, l)
+    return (len(liste_melliferes_atteignable)) * 100  # en g
+
+
+"""
+arbres, _ = extraction_graphe(355)
+L = [
+    arbre
+    for arbre in arbres
+    if arbre["genre"] == "Platanus"
+    and "Parking Square de Guyenne" in arbre["denomination"]
+]
+s = L[0]["id"]
+print(quantite_pollen(s, 2000))
+"""
+
+
+"""
+Question 26: En supposant qu’une abeille peut transporter 10mg de pollen par voyage, et
+qu’une abeille butineuse (courageuse) peut réaliser deux voyages par jour. Combien faut il
+
+"""
+
+
+def nombre_abeilles(s, l):
+    Q = quantite_pollen(s, l) * 1000
+    return int(Q / (10 * 2))  # 2voyages pooour 1mg
+
+
+"""
+arbres, _ = extraction_graphe(355)
+L = [
+    arbre
+    for arbre in arbres
+    if arbre["genre"] == "Platanus"
+    and "Parking Square de Guyenne" in arbre["denomination"]
+]
+s = L[0]["id"]
+print(nombre_abeilles(s, 2000))
+"""
+
+"""
+Question 27: Un de vos amis est apiculteur et souhaite installer des ruches au pied des arbres
+dans la métropole. Pourriez vous lui proposer une répartition de moins de 50 ruches telle que
+chaque arbre mellifère est accessible par les abeilles d’au moins une ruche? Justifiez votre code,
+discutez de la complexité du problème puis de l’efficacité et de l’optimalité de votre solution.
+
+
+On a essayé de mettre en place une solution exacte et super optimisé mais elle serait trop gourmande 
+"""
