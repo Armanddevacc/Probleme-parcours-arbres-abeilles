@@ -870,7 +870,7 @@ def placer_ruches():
         arbre["id"] for arbre in arbres if arbre["genre"] in arbres_melliferes
     ]
     voisin = {}
-    for arbre_melli in arbres_melliferes_ids[:4]:
+    for arbre_melli in arbres_melliferes_ids:
         # long donc on teste avec arbres_melliferes_ids[:4]
         print(arbre_melli)
         voisin[arbre_melli] = plus_court_chemin_dijkstra(graphe, arbre_melli)
