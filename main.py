@@ -203,8 +203,6 @@ def extraction_graphe(distance) -> tuple:
     """
     Extrait les arêtes du graphe avec des distances inférieures ou égales à 200 mètres.
 
-    Returns:
-        Dict[int, List[Tuple[float, int]]]: Graphe filtré.
     """
     arbres, graphe = init_graph()
     graphe_200 = {}
@@ -383,7 +381,6 @@ def determiner_couverture_totale():
     while recouvrement < 0.99:
         arbres, graphe_a = extraction_graphe(a)
         nombre_arbre, _ = exploration(platane, graphe_a)
-        print(recouvrement, a)
         a += 5
         recouvrement = nombre_arbre / len(arbres)
     return a
@@ -527,8 +524,10 @@ def calculer_meilleur_arbre(a, func):
     return meilleur_arbre
 
 
+"""
 arbre_optimal = calculer_meilleur_arbre(355, plus_court_chemin_dijkstra)
 print(arbre_optimal)
+"""
 
 """
 Question 22: Pour répondre à la question précédente, vous avez probablement utilisé un al-
@@ -713,9 +712,10 @@ def melliferes_atteignable(s, l):
     return listes_melliferes_atteignables
 
 
+"""
 s = 1  # le sommet au choix
 print(melliferes_atteignable(s, 2000))
-
+"""
 
 """
 Question 24: Calculez et représentez sur une carte l’ensemble des parcours possibles pour une
@@ -850,5 +850,117 @@ chaque arbre mellifère est accessible par les abeilles d’au moins une ruche? 
 discutez de la complexité du problème puis de l’efficacité et de l’optimalité de votre solution.
 
 
-On a essayé de mettre en place une solution exacte et super optimisé mais elle serait trop gourmande 
+On a essayé de mettre en place une solution exacte et super optimisé mais elle serait trop gourmande. 
+On va alors mettre en place cette méthode:
+
+On place une ruche sur l’arbre qui couvre le plus d’autres arbres.
+On Supprime tous les arbres couverts.
+Répéter jusqu’à ce que tous les arbres mellifères soient couverts.
 """
+
+
+def placer_ruches():
+    """
+    Place les ruches de manière optimisée pour couvrir tous les arbres mellifères.
+
+    """
+    arbres, graphe = init_graph()
+    ruches = []
+    arbres_melliferes_ids = [
+        arbre["id"] for arbre in arbres if arbre["genre"] in arbres_melliferes
+    ]
+    voisin = {}
+    for arbre_melli in arbres_melliferes_ids[:4]:
+        # long donc on teste avec arbres_melliferes_ids[:4]
+        print(arbre_melli)
+        voisin[arbre_melli] = plus_court_chemin_dijkstra(graphe, arbre_melli)
+
+    i = 50
+    while i > 0 and len(arbres_melliferes_ids) > 0 and len(voisin) > 0:
+        id = max(voisin, key=lambda a: len(voisin[a]))
+        ruches.append(id)
+        arbres_melliferes_ids.remove(id)
+        voisin.pop(id)
+        for y, _ in graphe[id]:
+            if (
+                y in arbres_melliferes_ids
+            ):  # erreur sans cette ligne car certain arbres ne sont pas melliferes
+                arbres_melliferes_ids.remove(y)
+                voisin.pop(y)
+        i -= 1
+
+    return ruches
+
+
+# Test du placement des ruches
+print(placer_ruches())
+
+
+import folium
+
+
+def representer_ruches_sur_carte():
+    """
+    Génère une carte montrant la répartition des ruches et les arbres mellifères couverts.
+    """
+    arbres, graphe_355 = init_graph()
+
+    ruches = placer_ruches()
+
+    # Création de la carte centrée sur le premier arbre
+    premier_arbre = arbres[ruches[0]]
+    m = folium.Map(
+        location=[
+            premier_arbre["geo_point_2d"]["lat"],
+            premier_arbre["geo_point_2d"]["lon"],
+        ],
+        zoom_start=12,
+    )
+
+    for ruche_id in ruches:
+        arbre = arbres[ruche_id]
+        folium.Marker(
+            location=[arbre["geo_point_2d"]["lat"], arbre["geo_point_2d"]["lon"]],
+            tooltip=f"Ruche - {arbre['denomination']}",
+            icon=folium.Icon(color="red", icon="home"),
+        ).add_to(m)
+
+    arbres_couverts = set()
+    for ruche_id in ruches:
+        arbres_couverts.update(melliferes_atteignable(ruche_id))
+
+    for arbre_id in arbres_couverts:
+        if arbre_id not in ruches:  # Ne pas afficher les ruches deux fois
+            arbre = arbres[arbre_id]
+            folium.CircleMarker(
+                location=[arbre["geo_point_2d"]["lat"], arbre["geo_point_2d"]["lon"]],
+                radius=4,
+                color="green",
+                fill=True,
+                fill_color="green",
+                fill_opacity=0.7,
+                tooltip=f"{arbre['denomination']} - {arbre['genre']}",
+            ).add_to(m)
+
+    for ruche_id in ruches:
+        ruche = arbres[ruche_id]
+        arbres_couverts_par_ruche = melliferes_atteignable(ruche_id)
+
+        for arbre_id in arbres_couverts_par_ruche:
+            if arbre_id != ruche_id:  # Ne pas tracer de connexion vers soi-même
+                arbre = arbres[arbre_id]
+                folium.PolyLine(
+                    locations=[
+                        (ruche["geo_point_2d"]["lat"], ruche["geo_point_2d"]["lon"]),
+                        (arbre["geo_point_2d"]["lat"], arbre["geo_point_2d"]["lon"]),
+                    ],
+                    color="blue",
+                    weight=1.5,
+                ).add_to(m)
+
+    # 5️⃣ Sauvegarde et affichage de la carte
+    m.save("ruches_melliferes.html")
+
+
+# Exécution
+representer_ruches_sur_carte()

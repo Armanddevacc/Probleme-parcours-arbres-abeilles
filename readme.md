@@ -55,6 +55,4 @@ Chaque groupe doit fournir :
 - Les **cartes générées** sous forme de fichiers HTML.
 - Une **archive ZIP** contenant tous les fichiers (hors environnement virtuel).
 
-## Auteurs
-Merci de préciser les noms des participants et de mentionner si vous avez utilisé de l'IA pour réaliser le projet.
 
